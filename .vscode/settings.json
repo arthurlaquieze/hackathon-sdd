@@ -1,0 +1,12 @@
+{
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "black",
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "python.linting.lintOnSave": false,
+  "python.linting.flake8Args": [
+    "--ignore=E501,W503,F401" // ignore line length, line break, unused imports warnings
+  ],
+  "editor.codeActionsOnSave": {},
+  "python.analysis.typeCheckingMode": "basic"
+}
