@@ -1,6 +1,10 @@
 # MacOS garbage
 .DS_Store
 
+wandb/
+
+cnn-lightning/
+
 # logs
 lightning_logs/
 
