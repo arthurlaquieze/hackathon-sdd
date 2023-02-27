@@ -11,12 +11,7 @@ import torchvision.transforms as transforms
 
 
 class OSSE_Dataset(Dataset):
-    def __init__(
-        self,
-        OSSE_tensor,
-        eddie_tensor,
-        augmentations=None,
-    ):
+    def __init__(self, OSSE_tensor, eddie_tensor, augmentations):
         self.OSSE_tensor = OSSE_tensor
         self.eddie_tensor = eddie_tensor
         self.augmentations = augmentations
@@ -42,7 +37,7 @@ def get_data_loaders(
     osse_nan_value=None,
     eddies_nan_value=None,
     shuffle=True,
-    augment=False,
+    augmentations=None,
 ):
     selected_var = ["vomecrtyT", "vozocrtxT", "sossheig", "votemper"]
 
@@ -64,22 +59,9 @@ def get_data_loaders(
     y_train = torch.tensor(y_full[:idx_split, :, :, :], dtype=torch.int64)
     X_val = torch.tensor(X_full[idx_split:, :, :, :], dtype=torch.float32)
     y_val = torch.tensor(y_full[idx_split:, :, :, :], dtype=torch.int64)
-
-    augmentations = None
-    if augment:
-        augmentations = (
-            transforms.Compose(
-                [
-                    # no mirror
-                    transforms.RandomRotation(180),
-                    transforms.GaussianBlur(3, sigma=(0.1, 2.0)),
-                ]
-            ),
-        )
-
-    ds_train = OSSE_Dataset(X_train, y_train, augmentations)
+    ds_train = OSSE_Dataset(X_train, y_train, augmentations=augmentations)
     train_dataloader = DataLoader(ds_train, batch_size=batch_size, shuffle=shuffle)
-    ds_val = OSSE_Dataset(X_val, y_val, augmentations)
+    ds_val = OSSE_Dataset(X_val, y_val, augmentations=augmentations)
     val_dataloader = DataLoader(ds_val, batch_size=batch_size)
 
     return train_dataloader, val_dataloader
