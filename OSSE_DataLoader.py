@@ -24,7 +24,7 @@ class OSSE_Dataset(Dataset):
 
 
 def get_data_loaders(
-    batch_size, osse_xarray, eddies_xarray, osse_nan_value=None, eddies_nan_value=None
+    batch_size, osse_xarray, eddies_xarray, osse_nan_value=None, eddies_nan_value=None, shuffle=True
 ):
     selected_var = ["vomecrtyT", "vozocrtxT", "sossheig", "votemper"]
 
@@ -48,7 +48,7 @@ def get_data_loaders(
     y_val = torch.tensor(y_full[idx_split:, :, :, :])
 
     ds_train = OSSE_Dataset(X_train, y_train)
-    train_dataloader = DataLoader(ds_train, batch_size=batch_size)
+    train_dataloader = DataLoader(ds_train, batch_size=batch_size, shuffle=shuffle)
     ds_val = OSSE_Dataset(X_val, y_val)
     val_dataloader = DataLoader(ds_val, batch_size=batch_size)
 
