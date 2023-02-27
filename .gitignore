@@ -1,6 +1,12 @@
 # MacOS garbage
 .DS_Store
 
+# logs
+lightning_logs/
+
+# models
+models/
+
 # Data
 data/
 
