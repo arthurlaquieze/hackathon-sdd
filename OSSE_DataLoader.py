@@ -59,10 +59,13 @@ def get_data_loaders(
     y_train = torch.tensor(y_full[:idx_split, :, :, :], dtype=torch.int64)
     X_val = torch.tensor(X_full[idx_split:, :, :, :], dtype=torch.float32)
     y_val = torch.tensor(y_full[idx_split:, :, :, :], dtype=torch.int64)
+
     ds_train = OSSE_Dataset(X_train, y_train, augmentations=augmentations)
-    train_dataloader = DataLoader(ds_train, batch_size=batch_size, shuffle=shuffle)
+    train_dataloader = DataLoader(
+        ds_train, batch_size=batch_size, shuffle=shuffle, num_workers=4
+    )
     ds_val = OSSE_Dataset(X_val, y_val, augmentations=augmentations)
-    val_dataloader = DataLoader(ds_val, batch_size=batch_size)
+    val_dataloader = DataLoader(ds_val, batch_size=batch_size, num_workers=4)
 
     return train_dataloader, val_dataloader
 
