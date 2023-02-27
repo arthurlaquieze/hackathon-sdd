@@ -42,10 +42,10 @@ def get_data_loaders(
 
     nb_val = X_full.shape[0]
     idx_split = int(0.8 * nb_val)
-    X_train = torch.tensor(X_full[:idx_split, :, :, :])
-    y_train = torch.tensor(y_full[:idx_split, :, :, :])
-    X_val = torch.tensor(X_full[idx_split:, :, :, :])
-    y_val = torch.tensor(y_full[idx_split:, :, :, :])
+    X_train = torch.tensor(X_full[:idx_split, :, :, :], dtype=torch.float32)
+    y_train = torch.tensor(y_full[:idx_split, :, :, :], dtype=torch.int64)
+    X_val = torch.tensor(X_full[idx_split:, :, :, :], dtype=torch.float32)
+    y_val = torch.tensor(y_full[idx_split:, :, :, :], dtype=torch.int64)
 
     ds_train = OSSE_Dataset(X_train, y_train)
     train_dataloader = DataLoader(ds_train, batch_size=batch_size, shuffle=shuffle)
