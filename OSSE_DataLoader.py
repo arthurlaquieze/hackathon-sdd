@@ -7,12 +7,19 @@ import seaborn as sns
 import torch
 import xarray as xr
 from torch.utils.data import DataLoader, Dataset
+import torchvision.transforms as transforms
 
 
 class OSSE_Dataset(Dataset):
-    def __init__(self, OSSE_tensor, eddie_tensor):
+    def __init__(
+        self,
+        OSSE_tensor,
+        eddie_tensor,
+        augmentations=None,
+    ):
         self.OSSE_tensor = OSSE_tensor
         self.eddie_tensor = eddie_tensor
+        self.augmentations = augmentations
 
     def __len__(self):
         return self.OSSE_tensor.shape[0]
@@ -20,11 +27,22 @@ class OSSE_Dataset(Dataset):
     def __getitem__(self, idx):
         features = self.OSSE_tensor[idx, :, :, :]
         label = self.eddie_tensor[idx, :, :, :]
+
+        if self.augmentations is not None:
+            # apply augmentations transforms
+            features = self.augmentations(features)
+
         return features, label
 
 
 def get_data_loaders(
-    batch_size, osse_xarray, eddies_xarray, osse_nan_value=None, eddies_nan_value=None, shuffle=True
+    batch_size,
+    osse_xarray,
+    eddies_xarray,
+    osse_nan_value=None,
+    eddies_nan_value=None,
+    shuffle=True,
+    augment=False,
 ):
     selected_var = ["vomecrtyT", "vozocrtxT", "sossheig", "votemper"]
 
@@ -47,9 +65,21 @@ def get_data_loaders(
     X_val = torch.tensor(X_full[idx_split:, :, :, :], dtype=torch.float32)
     y_val = torch.tensor(y_full[idx_split:, :, :, :], dtype=torch.int64)
 
-    ds_train = OSSE_Dataset(X_train, y_train)
+    augmentations = None
+    if augment:
+        augmentations = (
+            transforms.Compose(
+                [
+                    # no mirror
+                    transforms.RandomRotation(180),
+                    transforms.GaussianBlur(3, sigma=(0.1, 2.0)),
+                ]
+            ),
+        )
+
+    ds_train = OSSE_Dataset(X_train, y_train, augmentations)
     train_dataloader = DataLoader(ds_train, batch_size=batch_size, shuffle=shuffle)
-    ds_val = OSSE_Dataset(X_val, y_val)
+    ds_val = OSSE_Dataset(X_val, y_val, augmentations)
     val_dataloader = DataLoader(ds_val, batch_size=batch_size)
 
     return train_dataloader, val_dataloader
