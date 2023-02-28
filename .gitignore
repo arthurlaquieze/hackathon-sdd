@@ -5,6 +5,8 @@ wandb/
 
 cnn-lightning/
 
+checkpoints/
+
 # logs
 lightning_logs/
 
