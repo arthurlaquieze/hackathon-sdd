@@ -58,7 +58,10 @@ def get_data_loaders(
     shuffle=True,
     augmentations=None,
 ):
-    SegmentationTransforms = SegmentationTransform(augmentations)
+    SegmentationTransforms = None
+
+    if augmentations is not None:
+        SegmentationTransforms = SegmentationTransform(augmentations)
 
     selected_var = ["vomecrtyT", "vozocrtxT", "sossheig", "votemper"]
 
