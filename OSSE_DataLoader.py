@@ -10,25 +10,43 @@ from torch.utils.data import DataLoader, Dataset
 import torchvision.transforms as transforms
 
 
+class SegmentationTransform:
+    def __init__(self, transform):
+        self.transform = transform
+
+    def __call__(self, image, labels):
+        # Apply the same transform to both the image and the label(s)
+
+        seed = torch.randint(2147483647, ())
+        random_state = torch.random.get_rng_state()
+        torch.manual_seed(seed)
+        image = self.transform(image)
+        torch.random.set_rng_state(random_state)
+        torch.manual_seed(seed)
+        labels = self.transform(labels)
+        torch.random.set_rng_state(random_state)
+
+        return image, labels
+
+
 class OSSE_Dataset(Dataset):
-    def __init__(self, OSSE_tensor, eddie_tensor, augmentations):
+    def __init__(self, OSSE_tensor, eddie_tensor, segmentation_transforms):
         self.OSSE_tensor = OSSE_tensor
         self.eddie_tensor = eddie_tensor
-        self.augmentations = augmentations
+        self.segmentation_transforms = segmentation_transforms
 
     def __len__(self):
         return self.OSSE_tensor.shape[0]
 
     def __getitem__(self, idx):
         features = self.OSSE_tensor[idx, :, :, :]
-        label = self.eddie_tensor[idx, :, :, :]
+        labels = self.eddie_tensor[idx, :, :, :]
 
-        if self.augmentations is not None:
+        if self.segmentation_transforms is not None:
             # apply augmentations transforms
-            features = self.augmentations(features)
-            label = self.augmentations(label)
+            features, labels = self.segmentation_transforms(features, labels)
 
-        return features, label
+        return features, labels
 
 
 def get_data_loaders(
@@ -40,12 +58,16 @@ def get_data_loaders(
     shuffle=True,
     augmentations=None,
 ):
+    SegmentationTransforms = SegmentationTransform(augmentations)
+
     selected_var = ["vomecrtyT", "vozocrtxT", "sossheig", "votemper"]
 
-    X_full = torch.tensor(osse_xarray.get(selected_var).to_array().to_numpy())
+    X_full = torch.tensor(
+        osse_xarray.get(selected_var).to_array().to_numpy(), dtype=torch.float32
+    )
     X_full = X_full.permute(1, 0, 2, 3)
 
-    y_full = torch.tensor(eddies_xarray.to_array().to_numpy())
+    y_full = torch.tensor(eddies_xarray.to_array().to_numpy(), dtype=torch.float32)
     y_full = y_full.permute(1, 0, 2, 3)
 
     if osse_nan_value is not None:
@@ -56,16 +78,18 @@ def get_data_loaders(
 
     nb_val = X_full.shape[0]
     idx_split = int(0.8 * nb_val)
-    X_train = torch.tensor(X_full[:idx_split, :, :, :], dtype=torch.float32)
-    y_train = torch.tensor(y_full[:idx_split, :, :, :], dtype=torch.int64)
-    X_val = torch.tensor(X_full[idx_split:, :, :, :], dtype=torch.float32)
-    y_val = torch.tensor(y_full[idx_split:, :, :, :], dtype=torch.int64)
+    X_train = X_full[:idx_split, :, :, :].clone().detach()
+    y_train = y_full[:idx_split, :, :, :].clone().detach()
+    X_val = X_full[idx_split:, :, :, :].clone().detach()
+    y_val = y_full[idx_split:, :, :, :].clone().detach()
 
-    ds_train = OSSE_Dataset(X_train, y_train, augmentations=augmentations)
+    ds_train = OSSE_Dataset(
+        X_train, y_train, segmentation_transforms=SegmentationTransforms
+    )
     train_dataloader = DataLoader(
         ds_train, batch_size=batch_size, shuffle=shuffle, num_workers=4
     )
-    ds_val = OSSE_Dataset(X_val, y_val, augmentations=augmentations)
+    ds_val = OSSE_Dataset(X_val, y_val, segmentation_transforms=SegmentationTransforms)
     val_dataloader = DataLoader(ds_val, batch_size=batch_size, num_workers=4)
 
     return train_dataloader, val_dataloader
