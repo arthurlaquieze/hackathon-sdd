@@ -26,6 +26,7 @@ class OSSE_Dataset(Dataset):
         if self.augmentations is not None:
             # apply augmentations transforms
             features = self.augmentations(features)
+            label = self.augmentations(label)
 
         return features, label
 
@@ -81,3 +82,14 @@ def get_xarray(parent_dir="./data"):
     OSSE_train = OSSE_train.rename({"time_counter": "time"})
 
     return OSSE_train, eddies_train, OSSE_test
+
+
+def normalize_osse(OSSE_train, OSSE_test):
+    # Normalize OSSE data
+    OSSE_train_mean = OSSE_train.mean()
+    OSSE_train_std = OSSE_train.std()
+    OSSE_train_norm = (OSSE_train - OSSE_train_mean) / OSSE_train_std
+
+    OSSE_test_norm = (OSSE_test - OSSE_train_mean) / OSSE_train_std
+
+    return OSSE_train_norm, OSSE_test_norm, OSSE_train_mean, OSSE_train_std
