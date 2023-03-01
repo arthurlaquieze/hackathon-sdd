@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import torch
+import torchvision.transforms as transforms
 import xarray as xr
 from torch.utils.data import DataLoader, Dataset
-import torchvision.transforms as transforms
 
 
 class SegmentationTransform:
@@ -16,7 +16,6 @@ class SegmentationTransform:
 
     def __call__(self, image, labels):
         # Apply the same transform to both the image and the label(s)
-
         seed = torch.randint(2147483647, ())
         random_state = torch.random.get_rng_state()
         torch.manual_seed(seed)
@@ -70,17 +69,22 @@ def get_data_loaders(
     )
     X_full = X_full.permute(1, 0, 2, 3)
 
+    # Add flipped data (equivalent to 180 degrees rotation)
+    X_full_flip = torch.flip(X_full, dims=(2, 3))
+    X_full = torch.cat([X_full, X_full_flip])
+
     y_full = torch.tensor(eddies_xarray.to_array().to_numpy(), dtype=torch.float32)
     y_full = y_full.permute(1, 0, 2, 3)
 
-    if osse_nan_value is not None:
-        X_full = X_full.nan_to_num(osse_nan_value)
+    y_full_flip = torch.flip(y_full, dims=(2, 3))
+    y_full = torch.cat([y_full, y_full_flip])
 
     if eddies_nan_value is not None:
         y_full = y_full.nan_to_num(eddies_nan_value)
 
     nb_val = X_full.shape[0]
-    idx_split = int(0.8 * nb_val)
+    idx_split = int(0.9 * nb_val)
+
     X_train = X_full[:idx_split, :, :, :].clone().detach()
     y_train = y_full[:idx_split, :, :, :].clone().detach()
     X_val = X_full[idx_split:, :, :, :].clone().detach()
@@ -115,8 +119,13 @@ def normalize_osse(OSSE_train, OSSE_test):
     # Normalize OSSE data
     OSSE_train_mean = OSSE_train.mean()
     OSSE_train_std = OSSE_train.std()
-    OSSE_train_norm = (OSSE_train - OSSE_train_mean) / OSSE_train_std
 
+    vyT, vxT, so, Temp = OSSE_train_mean.to_array().to_numpy()
+    values = {"vomecrtyT": vyT, "vozocrtxT": vxT, "sossheig": so, "votemper": Temp}
+    OSSE_train = OSSE_train.fillna(value=values)
+    OSSE_test = OSSE_test.fillna(value=values)
+
+    OSSE_train_norm = (OSSE_train - OSSE_train_mean) / OSSE_train_std
     OSSE_test_norm = (OSSE_test - OSSE_train_mean) / OSSE_train_std
 
     return OSSE_train_norm, OSSE_test_norm, OSSE_train_mean, OSSE_train_std
